@@ -1,0 +1,7 @@
+node_modules
+.idea
+.env
+.nyc_output
+coverage
+package-lock.json
+

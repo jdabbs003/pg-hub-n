@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#
+# Setup, install, and execute tests
+#
+# wget https://github.com/jdabbs003/pg-hub/blob/main/run-tests?raw=true
+# chmod 777 run-tests
+# ./run-tests
+#
+
+sudo apt install -y nodejs npm postgresql
+sudo -u postgres psql -c "create database test_db"
+sudo -u postgres psql -c "create user test_user with superuser password 'test_pass'"
+git clone https://github.com/jdabbs003/pg-hub.git
+cd pg-hub
+npm install
+npm test
