@@ -16,6 +16,26 @@ const config= {
     }
 }
 
+class TestLogger
+{
+    debug = null;
+
+    info(text)
+    {
+        console.info('hub: ' + text)
+    }
+
+    error(text)
+    {
+        console.error('hub: ' + test);
+    }
+
+    warn(text)
+    {
+        console.warn('hub: ' + text)
+    }
+}
+
 class Test1 {
     static Config = class {
         pool;
@@ -80,9 +100,9 @@ class Test1 {
         let result = await complete;
 
         if (result) {
-            console.log("Iteration " + instance + " completed successfully");
+            console.info("Iteration " + instance + " completed successfully");
         } else {
-            console.log("Iteration " + instance + " timed out");
+            console.info("Iteration " + instance + " timed out");
         }
 
         consumer.close();
@@ -124,14 +144,15 @@ async function main() {
         testConfig.iterations = 16;
         testConfig.pool = pgPool;
         testConfig.reconnectTimeMs = 5000;
+        testConfig.logger = new TestLogger()
 
         const test = new Test1(testConfig);
         const result = await test.run();
 
         if (result) {
-            console.log("Test 1 passed");
+            console.info("Test 1 passed");
         } else {
-            console.log("Test 1 failed");
+            console.error("Test 1 failed");
         }
     }
 }

@@ -2,10 +2,22 @@
 
 import Pg from 'pg';
 import {describe, it} from 'mocha';
-import config from './config.mjs';
+
 import {default as tests_a} from './testgroup_a.mjs';
 import {default as tests_b} from './testgroup_b.mjs';
 import {default as tests_c} from './testgroup_c.mjs';
+
+const config= {
+    db: {
+        host: "127.0.0.1",
+        port: 5432,
+        user: "test_user",
+        password: "test_pass",
+        database: "test_db",
+        keepAliveInitialDelayMillis: 10000,
+        keeplive: true,
+    }
+}
 
 let _pool = new Pg.Pool(config.db);
 

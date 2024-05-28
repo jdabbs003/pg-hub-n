@@ -20,9 +20,7 @@
   },
   "homepage": "https://github.com/jdabbs003/pg-hub#readme",
   "devDependencies": {
-    "eslint": "^9.3.0",
     "mocha": "^10.4.0",
-    "pg": "^8.11.5",
-    "pino": "^9.1.0"
+    "pg": "^8.11.5"
   }
 }

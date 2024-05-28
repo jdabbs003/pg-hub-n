@@ -665,14 +665,9 @@ const PgHub = {
         }
 
         #fsmExecNotify(data) {
-            this.#logDebug('pg notify');
+            this.#logDebug('pg notify received');
             ++this.#stats.received;
 
-            if (this.#topics === null) {
-                console.log('lkjlkj ' + this.#fsmPgClient ? "true" : "false");
-                console.log('lkjlkj ' + fsmStateText(this.#fsmState));
-                console.log('lkjlkj ' + data.channel);
-            }
             const topic = this.#topics.get(data.channel);
 
             if (topic === undefined) {
