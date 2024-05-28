@@ -54,7 +54,7 @@ class FsmInput {
         this.param1 = param1;
         this.param2 = param2
     }
-};
+}
 
 const FsmState = {
     init: 0,
@@ -353,6 +353,8 @@ const PgHub = {
         #fsmPendingObQ = null;
         /** @type {BigInt} */
         #fsmClientSeqn = 0n;
+        /** @type {BigInt} */
+        #fsmEntrancy = 0n;
 
         /**
          *
@@ -535,9 +537,6 @@ const PgHub = {
 
             for (const topic of topics) {
                 if (!sets.get(topic)) {
-                    //if (!consumer._sets.find((topic) => {
-                    //    return (topic.name === topics[i]);
-                    //})) {
                     let set = this.#topics.get(topic);
 
                     if (!set) {
@@ -631,8 +630,13 @@ const PgHub = {
                     this.#fsmStopResolve = null;
 
                     if (this.#fsmPgClient !== null) {
-                        this.#fsmPgClient.release();
+                        this.#fsmPgClient.release(true);
                         this.#fsmPgClient = null;
+                    }
+
+                    if (this.#fsmTimeout !== null) {
+                        clearTimeout(this.#fsmTimeout);
+                        this.#fsmTimeout = null;
                     }
 
                     for (const consumer of this.#consumers) {
@@ -651,15 +655,12 @@ const PgHub = {
 
                     this.#topics = null;
                     this.#pgPool = null;
-
-                    this.#logInfo('stopped');
-                    this.#logger = null;
                 }
 
-                this.#logDebug('fsm state change ' + fsmStateText(this.#fsmState) + ' -> ' + fsmStateText(newState));
+                this.#logDebug('state change ' + fsmStateText(this.#fsmState) + ' -> ' + fsmStateText(newState));
                 this.#fsmState = newState;
             } else {
-                this.#logError('fsm state change ' + fsmStateText(this.#fsmState) + ' -> ' + fsmStateText(newState) + ' (same)');
+                this.#logError('state change ' + fsmStateText(this.#fsmState) + ' -> ' + fsmStateText(newState) + ' (same)');
             }
         }
 
@@ -696,7 +697,6 @@ const PgHub = {
 
             this.#fsmPendingObQ = null;
             if (this.#fsmObQ0.length !== 0) {
-
                 this.#fsmPendingObQ = this.#fsmObQ0;
             } else if (this.#fsmObQ1.length !== 0) {
                 this.#fsmPendingObQ = this.#fsmObQ1;
@@ -715,26 +715,24 @@ const PgHub = {
          * @param {FsmInput} fsmInput
          */
 
-        fsmEntrancy = 0n;
-
         #fsm(input) {
             const self = this;
 
-            if (this.fsmEntrancy !== 0n) {
+            if (this.#fsmEntrancy !== 0n) {
                 this.#logError("fsm reentrancy");
             }
 
-            ++this.fsmEntrancy;
+            ++this.#fsmEntrancy;
 
             if ((input.code === FsmInput.error) && (input.param2 !== this.#fsmClientSeqn)) {
                 this.#logInfo("ignored late error from previous connection");
-                --this.fsmEntrancy;
+                --this.#fsmEntrancy;
                 return;
             }
 
             if ((input.code === FsmInput.notify) && (input.param2 !== this.#fsmClientSeqn)) {
                 this.#logInfo("ignored late notify from previous connection");
-                --this.fsmEntrancy;
+                --this.#fsmEntrancy;
                 return;
             }
 
@@ -743,6 +741,7 @@ const PgHub = {
                     switch (input.code) {
                         case FsmInput.startReq: {
                             this.#fsmChangeState(FsmState.connecting);
+                            this.#fsmClientSeqn++
                             this.#pgPool.connect((err, res) => {
                                 self.#fsm(new FsmInput(FsmInput.connectResult, err, res))
                             });
@@ -843,7 +842,9 @@ const PgHub = {
                         }
 
                         case FsmInput.timeout: {
+                            this.#fsmTimeout = null;
                             this.#fsmChangeState(FsmState.connecting);
+                            this.#fsmClientSeqn++
                             this.#pgPool.connect((err, res) => {
                                 self.#fsm(new FsmInput(FsmInput.connectResult, err, res))
                             });
@@ -866,8 +867,6 @@ const PgHub = {
                         }
 
                         case FsmInput.stopReq: {
-                            //  this.#pgClient.release();
-                            //  this.#pgClient = null;
                             this.#fsmChangeState(FsmState.stopped);
                             break;
                         }
@@ -886,13 +885,16 @@ const PgHub = {
                         }
 
                         case FsmInput.error: {
-                            this.#fsmPgClient.release();
+                            this.#fsmPgClient.release(true);
                             this.#fsmPgClient = null;
                             ++this.stats.connectLoss;
-                            this.#fsmChangeState(FsmState.connecting);
+
                             for (const consumer of this.#consumers) {
                                 this.#ibQ.push(new IbEvent(consumer, eventDisconnect));
                             }
+
+                            this.#fsmChangeState(FsmState.connecting);
+                            this.#fsmClientSeqn++
                             this.#pgPool.connect((err, res) => {
                                 self.#fsm(new FsmInput(FsmInput.connectResult, err, res))
                             });
@@ -916,8 +918,6 @@ const PgHub = {
                         }
 
                         case FsmInput.stopReq: {
-                            //   this.#pgClient.release();
-                            //  this.#pgClient = null;
                             this.#fsmChangeState(FsmState.stopped);
                             break;
                         }
@@ -937,13 +937,14 @@ const PgHub = {
                                 }
                             } else {
                                 this.#fsmPendingObQ = null;
-                                this.#fsmPgClient.release();
+                                this.#fsmPgClient.release(true);
                                 this.#fsmPgClient = null;
                                 ++this.stats.connectLoss;
                                 for (const consumer of this.#consumers) {
                                     this.#ibQ.push(new IbEvent(consumer, eventDisconnect));
                                 }
                                 this.#fsmChangeState(FsmState.connecting);
+                                this.#fsmClientSeqn++;
                                 this.#pgPool.connect((err, res) => {
                                     self.#fsm(new FsmInput(FsmInput.connectResult, err, res))
                                 });
@@ -967,12 +968,24 @@ const PgHub = {
                 }
 
                 case FsmState.stopped: {
-                    break;
+                    switch (input.code) {
+                        case FsmInput.connectResult: {
+                            if (input.param2) {
+                                input.param2.release(true);
+                            }
+
+                            break;
+                        }
+
+                        default: {
+                            break;
+                        }
+                    }
                 }
             }
 
             this.#processIbQ();
-            --this.fsmEntrancy;
+            --this.#fsmEntrancy;
         }
     }
 }
