@@ -1,6 +1,6 @@
 {
   "name": "pg-hub",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "PostgreSQL Event Hub for NodeJS",
   "main": "src/index.mjs",
   "scripts": {
