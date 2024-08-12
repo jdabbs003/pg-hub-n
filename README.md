@@ -1,11 +1,11 @@
-# pg-hub
+# pg-hub-n
 <a href="https://npmjs.org/package/pg-hub" title="View this project on NPM"><img src="https://img.shields.io/npm/v/pg-hub.svg" alt="NPM version" /></a>
 <a href="https://npmjs.org/package/pg-hub" title="View this project on NPM"><img src="https://img.shields.io/npm/dm/pg-hub.svg" alt="NPM downloads" /></a>
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![stability-beta](https://img.shields.io/badge/stability-beta-33bbff.svg)](https://github.com/mkenney/software-guides/blob/master/STABILITY-BADGES.md#beta)
 
 
-Lightweight event infrastructure built on PostgreSQL Notify/Listen.
+Lightweight NodeJS event infrastructure built on PostgreSQL Notify/Listen.
 
 ## install
 ```sh
@@ -20,9 +20,9 @@ and consume events.
 
 <p align="center"><img src="./diagrams/top-level.svg" width=400></p>
 
-Each event includes three fields, *topic*, *keys*, and *value*. The *topic* is an alphanumeric 
-string that corresponds directly to a PSQL notification channel. The *keys* field contains an ordered list of
-64-bit signed integers, and the *value* field is a JSON object. The *keys* and *value* fields are encoded into the
+Each event includes three fields, *topic*, *key*, and *value*. The *topic* is an alphanumeric 
+string that corresponds directly to a PSQL notification channel. The *key* field contains an ordered list of
+64-bit signed integers, and the *value* field is a JSON object. The *key* and *value* fields are encoded into the
 notification payload, while the *topic* field corresponds to a PostgreSQL [notification channel](https://www.postgresql.org/docs/current/sql-listen.html).
 
 ## example
@@ -50,7 +50,7 @@ const result2 = await hub.stop();
 
 ```
 
-### nodejs details
+### details
 The pg-hub object model includes **Hub** and **Consumer** object classes. The Hub class wraps a PostgreSQL
 connection using **[node-postgres](https://github.com/brianc/node-postgres)**. Hub objects support event producers
 with an outbound *notify* method, and they allow creation of event consumers with a *consumer* method. The Consumer
